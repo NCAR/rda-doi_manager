@@ -9,7 +9,6 @@ from . import local_settings as settings
 
 from lxml import etree as ElementTree
 
-from libpkg.dbutils import uncompress_bitmap_values
 from libpkg.metaformats import datacite_4
 from libpkg.unixutils import make_tempdir, remove_tempdir, sendmail
 
@@ -35,14 +34,14 @@ def configure(auth_key, config):
         'host': "",
         'doi_prefix': "",
         'caller': "test",
-    }    
+    }
     operations_api_config = {
         'user': "",
         'password': "",
         'host': "",
         'doi_prefix': "",
         'caller': "operations",
-    }    
+    }
     managed_prefixes = []
     metadb_config = {
         'user': "",
@@ -101,14 +100,21 @@ def configure(auth_key, config):
             elif parts[0] == "error_notification":
                 notifications['error'].append(parts[1])
 
-    with open(os.path.join(os.path.dirname(__file__), "local_settings.py"), "w") as f:
+    with open(os.path.join(os.path.dirname(__file__),
+                           "local_settings.py"), "w") as f:
         f.write("authorization_key = \"" + auth_key + "\"\n")
-        f.write("\ntest_api_config = " + json.dumps(test_api_config, indent=4) + "\n")
-        f.write("\noperations_api_config = " + json.dumps(operations_api_config, indent=4) + "\n")
-        f.write("\nmanaged_prefixes = " + json.dumps(managed_prefixes, indent=4) + "\n")
-        f.write("\nmetadb_config = " + json.dumps(metadb_config, indent=4) + "\n")
-        f.write("\nwagtaildb_config = " + json.dumps(wagtaildb_config, indent=4) + "\n")
-        f.write("\nnotifications = " + json.dumps(notifications, indent=4) + "\n")
+        f.write(("\ntest_api_config = " + json.dumps(test_api_config, indent=4)
+                 + "\n"))
+        f.write(("\noperations_api_config = " +
+                 json.dumps(operations_api_config, indent=4) + "\n"))
+        f.write(("\nmanaged_prefixes = " +
+                 json.dumps(managed_prefixes, indent=4) + "\n"))
+        f.write(("\nmetadb_config = " + json.dumps(metadb_config, indent=4) +
+                 "\n"))
+        f.write(("\nwagtaildb_config = " +
+                 json.dumps(wagtaildb_config, indent=4) + "\n"))
+        f.write(("\nnotifications = " + json.dumps(notifications, indent=4) +
+                 "\n"))
 
     f.close()
 
@@ -116,45 +122,52 @@ def configure(auth_key, config):
 def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
     regfile = os.path.join(tdir, dsid + ".reg")
     if 'retire' in kwargs and kwargs['retire']:
-        url = "https://rda.ucar.edu/doi/{}/".format(doi);
+        url = "https://rda.ucar.edu/doi/{}/".format(doi)
     else:
-        url = "https://rda.ucar.edu/datasets/{}/".format(dsid);
+        url = "https://rda.ucar.edu/datasets/{}/".format(dsid)
     with open(regfile, "w") as f:
         f.write("doi=" + doi + "\n")
         f.write("url=" + url + "\n")
 
     f.close()
     # register the URL
-    proc = subprocess.run("curl -s --user {user}:{password} -H 'Content-type: text/plain;charset=UTF-8' -X PUT --data-binary @{regfile} https://{host}/doi/{doi}".format(**api_config, doi=doi, regfile=regfile), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run((
+            "curl -s --user {user}:{password} -H 'Content-type: text/plain;"
+            "charset=UTF-8' -X PUT --data-binary @{regfile} "
+            "https://{host}/doi/{doi}")
+            .format(**api_config, doi=doi, regfile=regfile),
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     err = proc.stderr.decode("utf-8")
     if len(err) > 0:
-        err = "Error while registering the URL for DOI/dsid: '{}/{}': '{}'".format(doi, config['identifier'], err)
-        sendmail(
-            settings.notifications['error'],
-            "rdadoi@ucar.edu",
-            "DOI Error",
-            err,
-            devel=DEBUG
-        )
+        err = ("Error while registering the URL for DOI/dsid: "
+               "'{}/{}': '{}'").format(doi, dsid, err)
+        sendmail(settings.notifications['error'],
+                 "rdadoi@ucar.edu",
+                 "DOI Error",
+                 err,
+                 devel=DEBUG)
         raise RuntimeError(err)
 
     out = proc.stdout.decode("utf-8")
     if out != "OK":
-        err = "Unexpected response while registering the URL for DOI/dsid: '{}/{}': '{}'".format(doi, dsid, out)
-        sendmail(
-            settings.notifications['error'],
-            "rdadoi@ucar.edu",
-            "DOI Error",
-            err,
-            devel=DEBUG
-        )
+        err = ("Unexpected response while registering the URL for DOI/dsid: "
+               "'{}/{}': '{}'").format(doi, dsid, out)
+        sendmail(settings.notifications['error'],
+                 "rdadoi@ucar.edu",
+                 "DOI Error",
+                 err,
+                 devel=DEBUG)
         raise RuntimeError(err)
 
     # verify the registration
-    proc = subprocess.run("curl -s --user {user}:{password} https://{host}/doi/{doi}".format(**api_config, doi=doi), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run((
+            "curl -s --user {user}:{password} https://{host}/doi/{doi}")
+            .format(**api_config, doi=doi),
+            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     err = proc.stderr.decode("utf-8")
     if len(err) > 0:
-        err = "Error while retrieving the registered URL for DOI/dsid: '{}/{}': '{}'".format(doi, dsid, err)
+        err = ("Error while retrieving the registered URL for DOI/dsid: "
+               "'{}/{}': '{}'").format(doi, dsid, err)
         sendmail(
             settings.notifications['error'],
             "rdadoi@ucar.edu",
@@ -166,7 +179,8 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
 
     out = proc.stdout.decode("utf-8")
     if out != url:
-        err = "Unexpected response while retrieving the registered URL for DOI/dsid: '{}/{}': '{}'".format(doi, dsid, out)
+        err = ("Unexpected response while retrieving the registered URL for "
+               "DOI/dsid: '{}/{}': '{}'").format(doi, dsid, out)
         sendmail(
             settings.notifications['error'],
             "rdadoi@ucar.edu",
@@ -178,7 +192,23 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
 
 
 def create_doi(config):
+    try:
+        conn = psycopg2.connect(**settings.metadb_config)
+        cursor = conn.cursor()
+    except psycopg2.Error as err:
+        raise RuntimeError("metadata database connection error: '{}'"
+                           .format(err))
+
     if config['api_config']['caller'] == "operations":
+        cursor.execute((
+                "select doi from dssdb.dsvrsn where dsid = %s and status = "
+                "'A'"), (config['identifier'], ))
+        res = cursor.fetchone()
+        if res is None:
+            raise RuntimeError((
+                    "dataset '{}' not found or has not been validated")
+                    .format(config['identifier']))
+
         test_config = config.copy()
         test_config['api_config'] = settings.test_api_config
         out, warn = create_doi(test_config)
@@ -186,25 +216,25 @@ def create_doi(config):
             raise RuntimeError("failed test run: '{}'".format(warn))
 
     try:
-        conn = psycopg2.connect(**settings.metadb_config)
-        cursor = conn.cursor()
-    except psycopg2.Error as err:
-        raise RuntimeError("metadata database connection error: '{}'".format(err))
-
-    try:
-        cursor.execute("select type from search.datasets where dsid = %s", (config['identifier'], ))
+        cursor.execute("select type from search.datasets where dsid = %s",
+                       (config['identifier'], ))
         res = cursor.fetchone()
         conn.close()
     except psycopg2.Error as err:
         raise RuntimeError("metadata database error: '{}'".format(err))
     else:
         if res is None:
-            raise RuntimeError("dataset '{}' not found".format(config['identifier']))
+            raise RuntimeError("dataset '{}' not found"
+                               .format(config['identifier']))
 
         if res[0] not in ("P", "H"):
-            raise RuntimeError("a DOI can only be assigned to a dataset typed as 'primary' or 'historical'")
+            raise RuntimeError((
+                    "a DOI can only be assigned to a dataset typed as "
+                    "'primary' or 'historical'"))
 
-        dc, warn = datacite_4.export(config['identifier'], settings.metadb_config, settings.wagtaildb_config)
+        dc, warn = datacite_4.export(
+                config['identifier'], settings.metadb_config,
+                settings.wagtaildb_config)
 
         # mint the DOI and send the associated metadata
         tdir = make_tempdir("/tmp")
@@ -216,7 +246,12 @@ def create_doi(config):
             f.write(dc)
 
         f.close()
-        proc = subprocess.run("curl -s --user {user}:{password} -H 'Content-type: application/xml;charset=UTF-8' -X PUT -d@{dcfile} https://{host}/metadata/{doi_prefix}".format(**config['api_config'], dcfile=dcfile), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run((
+                "curl -s --user {user}:{password} -H 'Content-type: "
+                "application/xml;charset=UTF-8' -X PUT -d@{dcfile} "
+                "https://{host}/metadata/{doi_prefix}")
+                .format(**config['api_config'], dcfile=dcfile),
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         err = proc.stderr.decode("utf-8")
         if len(err) > 0:
             raise RuntimeError("error while creating DOI: '{}'".format(err))
@@ -224,16 +259,19 @@ def create_doi(config):
         out = proc.stdout.decode("utf-8")
         parts = out.split()
         if len(parts) != 2 or parts[0] != "OK":
-            raise RuntimeError("unexpected response while creating DOI: '{}'".format(out))
+            raise RuntimeError("unexpected response while creating DOI: '{}'"
+                               .format(out))
 
         doi = parts[-1][1:-1]
         out = ["Success: " + doi]
 
         # register the dereferencing URL for the DOI
         time.sleep(5)
-        do_url_registration(doi, config['identifier'], config['api_config'], tdir)
+        do_url_registration(doi, config['identifier'], config['api_config'],
+                            tdir)
         if config['api_config']['caller'] == "operations":
-            out.append("View the DOI at https://commons.datacite.org/?query=" + doi)
+            out.append(("View the DOI at https://commons.datacite.org/?query="
+                        + doi))
 
     finally:
         remove_tempdir(tdir)
@@ -244,7 +282,8 @@ def create_doi(config):
 def update_doi(config, **kwargs):
     parts = config['identifier'].split("==")
     if len(parts) != 2:
-        raise RuntimeError("invalid relation '{}'".format(config['identifier']))
+        raise RuntimeError("invalid relation '{}'"
+                           .format(config['identifier']))
 
     doi = parts[0]
     dsid = parts[1]
@@ -254,10 +293,14 @@ def update_doi(config, **kwargs):
 
     try:
         retire = True if 'retire' in kwargs and kwargs['retire'] else False
-        dc, warn = export_to_datacite_4(dsid, settings.metadb_config, settings.wagtaildb_config, mandatoryOnly=retire)
+        dc, warn = datacite_4.export(
+                dsid, settings.metadb_config, settings.wagtaildb_config,
+                mandatoryOnly=retire)
         # validate the DataCite XML before sending it
         root = ElementTree.fromstring(dc).find(".")
-        schema_parts = root.get("{http://www.w3.org/2001/XMLSchema-instance}schemaLocation").split()
+        schema_parts = root.get((
+                "{http://www.w3.org/2001/XMLSchema-instance}"
+                "schemaLocation")).split()
         xml_schema = ElementTree.XMLSchema(ElementTree.parse(schema_parts[-1]))
         xml_schema.assertValid(root)
         dcfile = os.path.join(tdir, dsid + ".dc4")
@@ -266,7 +309,12 @@ def update_doi(config, **kwargs):
 
         f.close()
         # send the XML to DataCite
-        proc = subprocess.run("curl -s --user {user}:{password} -H 'Content-type: application/xml;charset=UTF-8' -X PUT -d@{dcfile} https://{host}/metadata/{doi}".format(**config['api_config'], dcfile=dcfile, doi=doi), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.run((
+                "curl -s --user {user}:{password} -H 'Content-type: "
+                "application/xml;charset=UTF-8' -X PUT -d@{dcfile} "
+                "https://{host}/metadata/{doi}")
+                .format(**config['api_config'], dcfile=dcfile, doi=doi),
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         err = proc.stderr.decode("utf-8")
         if len(err) > 0:
             err = "Error sending metadata for DOI: '{}': '{}'".format(doi, err)
@@ -280,7 +328,8 @@ def update_doi(config, **kwargs):
             raise RuntimeError(err)
         out = proc.stdout.decode("utf-8")
         if out.find("OK") != 0:
-            err = "Unexpected response while sending metadata for DOI: '{}': '{}'".format(doi, out)
+            err = ("Unexpected response while sending metadata for DOI: "
+                   "'{}': '{}'").format(doi, out)
             sendmail(
                 settings.notifications['error'],
                 "rdadoi@ucar.edu",
@@ -290,7 +339,8 @@ def update_doi(config, **kwargs):
             )
             raise RuntimeError(err)
 
-        do_url_registration(doi, dsid, config['api_config'], tdir, retire=retire)
+        do_url_registration(doi, dsid, config['api_config'], tdir,
+                            retire=retire)
 
     finally:
         remove_tempdir(tdir)
@@ -301,13 +351,18 @@ def update_doi(config, **kwargs):
 def main():
     if len(sys.argv[1:]) < 3:
         print((
-            "usage: {} <authorization_key> [options...] <mode> <identifier>".format(sys.argv[0][sys.argv[0].rfind("/")+1:]) + "\n"
+            ("usage: {} <authorization_key> [options...] <mode> <identifier>")
+            .format(sys.argv[0][sys.argv[0].rfind("/")+1:]) + "\n"
             "\nmode (must be one of the following):\n"
-            "    configure <file>    initialize/update configuration from entries in <file>\n"
+            "    configure <file>    initialize/update configuration from "
+            "entries in <file>\n"
             "                        file 'local_settings.py' is created\n"
-            "    create <dnnnnnn>    mint and register a new DOI for dataset dnnnnnn\n"
-            "    update <relation>   update the <DOI==dsid> relationship for an existing DOI\n"
-            "    terminate <DOI>     terminate the DOI and update the URL registration to\n"
+            "    create <dnnnnnn>    mint and register a new DOI for dataset "
+            "dnnnnnn\n"
+            "    update <relation>   update the <DOI==dsid> relationship for "
+            "an existing DOI\n"
+            "    terminate <DOI>     terminate the DOI and update the URL "
+            "registration to\n"
             "                        point to a 'dead' landing page\n"
             "\noptions:\n"
             "    --debug  show stack trace for an exception\n"
