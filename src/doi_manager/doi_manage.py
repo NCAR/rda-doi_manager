@@ -10,7 +10,7 @@ from . import local_settings as settings
 from lxml import etree as ElementTree
 
 from libpkg.dbutils import uncompress_bitmap_values
-from libpkg.metautils import export_to_datacite_4
+from libpkg.metaformats import datacite_4
 from libpkg.unixutils import make_tempdir, remove_tempdir, sendmail
 
 
@@ -204,7 +204,7 @@ def create_doi(config):
         if res[0] not in ("P", "H"):
             raise RuntimeError("a DOI can only be assigned to a dataset typed as 'primary' or 'historical'")
 
-        dc, warn = export_to_datacite_4(config['identifier'], settings.metadb_config, settings.wagtaildb_config)
+        dc, warn = datacite_4.export(config['identifier'], settings.metadb_config, settings.wagtaildb_config)
 
         # mint the DOI and send the associated metadata
         tdir = make_tempdir("/tmp")
