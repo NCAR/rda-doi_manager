@@ -210,7 +210,7 @@ def create_doi(config):
                     .format(config['identifier']))
         elif res[0] != "X":
             raise RuntimeError("dataset '{}' already has an active DOI: '{}'"
-                               .format(config['identifier'], res[0])
+                               .format(config['identifier'], res[0]))
 
         test_config = config.copy()
         test_config['api_config'] = settings.test_api_config
