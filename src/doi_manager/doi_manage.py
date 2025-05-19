@@ -277,7 +277,8 @@ def create_doi(config):
                         + doi))
 
     finally:
-        remove_tempdir(tdir)
+        if 'tdir' in locals():
+            remove_tempdir(tdir)
 
     return ("\n".join(out), warn)
 
