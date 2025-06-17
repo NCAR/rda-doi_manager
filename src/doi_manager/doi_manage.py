@@ -127,7 +127,7 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
             cursor.execute((
                     "select r.resolution from dssdb.dsvrsn as v left join "
                     "metautil.doi_registration as r on r.doi ilike v.doi "
-                    "where v.dsid = %s"), (dsid, )) 
+                    "where v.dsid = %s"), (dsid, ))
             url = cursor.fetchone()
             conn.close()
             if url is not None:
@@ -137,6 +137,7 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
 
         except psycopg2.Error as err:
             raise RuntimeError("metadata database connection error: '{}'"
+                               .format(err))
 
     with open(regfile, "w") as f:
         f.write("doi=" + doi + "\n")
