@@ -27,7 +27,6 @@ def configure(auth_key, config):
     with open(config['identifier'], "r") as f:
         lines = f.read().splitlines()
 
-    f.close()
     test_api_config = {
         'user': "",
         'password': "",
@@ -116,20 +115,33 @@ def configure(auth_key, config):
         f.write(("\nnotifications = " + json.dumps(notifications, indent=4) +
                  "\n"))
 
-    f.close()
-
 
 def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
     regfile = os.path.join(tdir, dsid + ".reg")
     if 'retire' in kwargs and kwargs['retire']:
         url = "https://rda.ucar.edu/doi/{}/".format(doi)
     else:
-        url = "https://rda.ucar.edu/datasets/{}/".format(dsid)
+        try:
+            conn = psycopg2.connect(**settings.metadb_config)
+            cursor = conn.cursor()
+            cursor.execute((
+                    "select r.resolution from dssdb.dsvrsn as v left join "
+                    "metautil.doi_registration as r on r.doi ilike v.doi "
+                    "where v.dsid = %s"), (dsid, )) 
+            url = cursor.fetchone()
+            conn.close()
+            if url is not None:
+                url = url[0]
+            else:
+                url = "https://rda.ucar.edu/datasets/{}/".format(dsid)
+
+        except psycopg2.Error as err:
+            raise RuntimeError("metadata database connection error: '{}'"
+
     with open(regfile, "w") as f:
         f.write("doi=" + doi + "\n")
         f.write("url=" + url + "\n")
 
-    f.close()
     # register the URL
     proc = subprocess.run((
             "curl -s --user {user}:{password} -H 'Content-type: text/plain;"
@@ -248,7 +260,6 @@ def create_doi(config):
         with open(dcfile, "w") as f:
             f.write(dc)
 
-        f.close()
         proc = subprocess.run((
                 "curl -s --user {user}:{password} -H 'Content-type: "
                 "application/xml;charset=UTF-8' -X PUT -d@{dcfile} "
@@ -311,7 +322,6 @@ def update_doi(config, **kwargs):
         with open(dcfile, "w") as f:
             f.write(dc)
 
-        f.close()
         # send the XML to DataCite
         proc = subprocess.run((
                 "curl -s --user {user}:{password} -H 'Content-type: "
