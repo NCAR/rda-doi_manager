@@ -130,7 +130,7 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
                     "where v.dsid = %s"), (dsid, ))
             url = cursor.fetchone()
             conn.close()
-            if url is not None:
+            if url is not None and url[0] is not None:
                 url = url[0]
             else:
                 url = "https://rda.ucar.edu/datasets/{}/".format(dsid)
