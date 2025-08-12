@@ -42,6 +42,7 @@ def configure(auth_key, config):
         'caller': "operations",
     }
     managed_prefixes = []
+    resolution_domain = ""
     metadb_config = {
         'user': "",
         'password': "",
@@ -78,6 +79,8 @@ def configure(auth_key, config):
                 operations_api_config['doi_prefix'] = parts[1]
             elif parts[0] == "managed_prefix":
                 managed_prefixes.append(parts[1])
+            elif parts[0] == "resolution_domain":
+                resolution_domain = parts[1]
             elif parts[0] == "metadata_database_username":
                 metadb_config['user'] = parts[1]
             elif parts[0] == "metadata_database_password":
@@ -108,6 +111,7 @@ def configure(auth_key, config):
                  json.dumps(operations_api_config, indent=4) + "\n"))
         f.write(("\nmanaged_prefixes = " +
                  json.dumps(managed_prefixes, indent=4) + "\n"))
+        f.write("\nresolution_domain = \"" + resolution_domain + "\"\n")
         f.write(("\nmetadb_config = " + json.dumps(metadb_config, indent=4) +
                  "\n"))
         f.write(("\nwagtaildb_config = " +
@@ -119,7 +123,7 @@ def configure(auth_key, config):
 def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
     regfile = os.path.join(tdir, dsid + ".reg")
     if 'retire' in kwargs and kwargs['retire']:
-        url = "https://rda.ucar.edu/doi/{}/".format(doi)
+        url = "https://" + settings.resolution_domain + "/doi/{}/".format(doi)
     else:
         try:
             conn = psycopg2.connect(**settings.metadb_config)
@@ -133,7 +137,9 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
             if url is not None and url[0] is not None:
                 url = url[0]
             else:
-                url = "https://rda.ucar.edu/datasets/{}/".format(dsid)
+                url = (
+                        "https://" + settings.resolution_domain +
+                        "/datasets/{}/".format(dsid))
 
         except psycopg2.Error as err:
             raise RuntimeError("metadata database connection error: '{}'"
