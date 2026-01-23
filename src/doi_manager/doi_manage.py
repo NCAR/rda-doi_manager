@@ -434,7 +434,7 @@ def main():
             sys.exit(1)
 
         if len(warn) > 0:
-            print("Warning(s):\n{}".format(warn))
+            print("Warning(s):\n{}".format(warn), file=sys.stderr)
 
         if 'out' in locals() and len(out) > 0:
             print(out)
