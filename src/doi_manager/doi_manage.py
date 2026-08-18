@@ -214,6 +214,8 @@ def do_url_registration(doi, dsid, api_config, tdir, **kwargs):
 
 
 def create_doi(config):
+    print("DOI creation is temporarily suspended. Contact dattore@ucar.edu for assistance", file=sys.stderr)
+    sys.exit(2)
     try:
         conn = psycopg2.connect(**settings.metadb_config)
         cursor = conn.cursor()
