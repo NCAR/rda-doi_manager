@@ -230,7 +230,7 @@ def create_doi(config):
             raise RuntimeError((
                     "dataset '{}' not found or has not been validated")
                     .format(config['identifier']))
-        elif res[0] != "X":
+        elif res[0] != "Y":
             raise RuntimeError("dataset '{}' already has an active DOI: '{}'"
                                .format(config['identifier'], res[0]))
 
